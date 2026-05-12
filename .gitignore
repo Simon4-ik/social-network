@@ -1,0 +1,14 @@
+backend/server.exe
+backend/server
+backend/social.db
+backend/social.db-shm
+backend/social.db-wal
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+frontend/node_modules
+frontend/.next
+frontend/out
+frontend/.env*.local
+
+.claude/

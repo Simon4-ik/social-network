@@ -1,0 +1,5 @@
+social.db
+server.exe
+uploads/*
+!uploads/.gitkeep
+.git

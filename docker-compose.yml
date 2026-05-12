@@ -1,0 +1,29 @@
+services:
+  backend:
+    build: ./backend
+    image: social-network-backend
+    ports:
+      - "8080:8080"
+    environment:
+      ADDR: ":8080"
+      DB_PATH: "/app/data/social.db"
+      MIGRATIONS_URL: "file:///app/pkg/db/migrations/sqlite"
+      UPLOADS_DIR: "/app/uploads"
+      CORS_ORIGIN: "http://localhost:3000"
+    volumes:
+      - backend-data:/app/data
+      - backend-uploads:/app/uploads
+
+  frontend:
+    build: ./frontend
+    image: social-network-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:8080"
+    depends_on:
+      - backend
+
+volumes:
+  backend-data:
+  backend-uploads:
