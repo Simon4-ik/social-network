@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -128,6 +129,11 @@ func (s *Server) handleEnvelope(c *Client, env Envelope) {
 		ev := Envelope{Type: "dm", Payload: body}
 		s.Hub.SendTo(p.To, ev)
 		s.Hub.SendTo(c.UserID, ev)
+		s.notify(p.To, "dm_message", map[string]any{
+			"from":      c.UserID,
+			"from_name": s.userName(c.UserID),
+			"content":   snippet(p.Content),
+		})
 
 	case "group":
 		var p groupPayload
@@ -150,16 +156,74 @@ func (s *Server) handleEnvelope(c *Client, env Envelope) {
 		ev := Envelope{Type: "group", Payload: body}
 		// fan out to all group members
 		rows, err := s.DB.Query(`SELECT user_id FROM group_members WHERE group_id = ?`, p.GroupID)
+		recipients := []string{}
 		if err == nil {
 			for rows.Next() {
 				var uid string
 				if err := rows.Scan(&uid); err == nil {
 					s.Hub.SendTo(uid, ev)
+					if uid != c.UserID {
+						recipients = append(recipients, uid)
+					}
 				}
 			}
 			rows.Close()
 		}
+		if len(recipients) > 0 {
+			fromName := s.userName(c.UserID)
+			groupTitle := s.groupTitle(p.GroupID)
+			snip := snippet(p.Content)
+			for _, uid := range recipients {
+				s.notify(uid, "group_message", map[string]any{
+					"group_id":    p.GroupID,
+					"group_title": groupTitle,
+					"from":        c.UserID,
+					"from_name":   fromName,
+					"content":     snip,
+				})
+			}
+		}
 	}
+}
+
+// notify inserts a notifications row and pushes a "notification" WS event.
+// Lives in this package (instead of pkg/notify) to avoid an import cycle.
+func (s *Server) notify(userID, typ string, payload map[string]any) {
+	if s.DB == nil {
+		return
+	}
+	id := newID()
+	body, _ := json.Marshal(payload)
+	_, err := s.DB.Exec(`INSERT INTO notifications (id, user_id, type, payload) VALUES (?, ?, ?, ?)`,
+		id, userID, typ, string(body))
+	if err != nil {
+		return
+	}
+	evPayload, _ := json.Marshal(map[string]any{
+		"id": id, "type": typ, "payload": payload,
+	})
+	s.Hub.SendTo(userID, Envelope{Type: "notification", Payload: evPayload})
+}
+
+func (s *Server) userName(id string) string {
+	var fn, ln string
+	_ = s.DB.QueryRow(`SELECT first_name, last_name FROM users WHERE id = ?`, id).Scan(&fn, &ln)
+	return strings.TrimSpace(fn + " " + ln)
+}
+
+func (s *Server) groupTitle(id string) string {
+	var t string
+	_ = s.DB.QueryRow(`SELECT title FROM groups WHERE id = ?`, id).Scan(&t)
+	return t
+}
+
+func snippet(s string) string {
+	const max = 80
+	s = strings.TrimSpace(s)
+	if len(s) > max {
+		return s[:max] + "…"
+	}
+	return s
 }
 
 func (s *Server) canDM(a, b string) bool {

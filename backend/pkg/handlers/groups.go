@@ -128,7 +128,13 @@ func (g *Groups) Invite(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		if n, _ := res.RowsAffected(); n > 0 {
-			g.Notifier.Send(uid, "group_invite", map[string]any{"group_id": gid, "invitation_id": invID, "from": me})
+			g.Notifier.Send(uid, "group_invite", map[string]any{
+				"group_id":      gid,
+				"group_title":   g.Notifier.GroupTitle(gid),
+				"invitation_id": invID,
+				"from":          me,
+				"from_name":     g.Notifier.UserName(me),
+			})
 		}
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -184,7 +190,13 @@ func (g *Groups) RequestJoin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if n, _ := res.RowsAffected(); n > 0 {
-		g.Notifier.Send(creator, "group_join_request", map[string]any{"group_id": gid, "request_id": reqID, "from": me})
+		g.Notifier.Send(creator, "group_join_request", map[string]any{
+			"group_id":    gid,
+			"group_title": g.Notifier.GroupTitle(gid),
+			"request_id":  reqID,
+			"from":        me,
+			"from_name":   g.Notifier.UserName(me),
+		})
 	}
 	w.WriteHeader(http.StatusCreated)
 }
@@ -288,7 +300,12 @@ func (g *Groups) CreateEvent(w http.ResponseWriter, r *http.Request) {
 		for rows.Next() {
 			var uid string
 			if err := rows.Scan(&uid); err == nil {
-				g.Notifier.Send(uid, "group_event", map[string]any{"group_id": gid, "event_id": id})
+				g.Notifier.Send(uid, "group_event", map[string]any{
+					"group_id":    gid,
+					"group_title": g.Notifier.GroupTitle(gid),
+					"event_id":    id,
+					"event_title": req.Title,
+				})
 			}
 		}
 		rows.Close()

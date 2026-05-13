@@ -39,7 +39,10 @@ func (f *Followers) Follow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if status == "pending" {
-		f.Notifier.Send(target, "follow_request", map[string]any{"from": me})
+		f.Notifier.Send(target, "follow_request", map[string]any{
+			"from":      me,
+			"from_name": f.Notifier.UserName(me),
+		})
 	}
 	writeJSON(w, http.StatusCreated, map[string]string{"status": status})
 }
@@ -70,7 +73,10 @@ func (f *Followers) Accept(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no pending request", http.StatusNotFound)
 		return
 	}
-	f.Notifier.Send(follower, "follow_accepted", map[string]any{"by": me})
+	f.Notifier.Send(follower, "follow_accepted", map[string]any{
+		"by":      me,
+		"by_name": f.Notifier.UserName(me),
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 

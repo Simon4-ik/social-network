@@ -200,7 +200,12 @@ func (p *Posts) AddComment(w http.ResponseWriter, r *http.Request) {
 	var owner string
 	_ = p.DB.QueryRow(`SELECT user_id FROM posts WHERE id = ?`, postID).Scan(&owner)
 	if owner != "" && owner != me {
-		p.Notifier.Send(owner, "post_comment", map[string]any{"post_id": postID, "from": me, "comment_id": id})
+		p.Notifier.Send(owner, "post_comment", map[string]any{
+			"post_id":    postID,
+			"from":       me,
+			"from_name":  p.Notifier.UserName(me),
+			"comment_id": id,
+		})
 	}
 	writeJSON(w, http.StatusCreated, map[string]string{"id": id})
 }

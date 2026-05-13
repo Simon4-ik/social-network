@@ -3,6 +3,7 @@ package notify
 import (
 	"database/sql"
 	"encoding/json"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -38,4 +39,24 @@ func (n *Notifier) Send(userID, typ string, payload map[string]any) {
 		})
 		n.Hub.SendTo(userID, ws.Envelope{Type: "notification", Payload: evPayload})
 	}
+}
+
+// UserName returns "First Last" for the given user id (empty if not found).
+func (n *Notifier) UserName(id string) string {
+	if n == nil || n.DB == nil {
+		return ""
+	}
+	var fn, ln string
+	_ = n.DB.QueryRow(`SELECT first_name, last_name FROM users WHERE id = ?`, id).Scan(&fn, &ln)
+	return strings.TrimSpace(fn + " " + ln)
+}
+
+// GroupTitle returns the title for the given group id (empty if not found).
+func (n *Notifier) GroupTitle(id string) string {
+	if n == nil || n.DB == nil {
+		return ""
+	}
+	var t string
+	_ = n.DB.QueryRow(`SELECT title FROM groups WHERE id = ?`, id).Scan(&t)
+	return t
 }

@@ -90,6 +90,8 @@ func main() {
 	mux.HandleFunc("GET /api/conversations", sessions.Require(chatH.Conversations))
 	mux.HandleFunc("GET /api/messages/dm/{user_id}", sessions.Require(chatH.DMHistory))
 	mux.HandleFunc("GET /api/messages/group/{group_id}", sessions.Require(chatH.GroupHistory))
+	mux.HandleFunc("POST /api/messages/dm/{user_id}/read", sessions.Require(chatH.MarkDMRead))
+	mux.HandleFunc("POST /api/messages/group/{group_id}/read", sessions.Require(chatH.MarkGroupRead))
 	mux.HandleFunc("GET /api/ws", sessions.Require(wsSrv.Handle))
 
 	mux.HandleFunc("GET /api/notifications", sessions.Require(notifH.List))
